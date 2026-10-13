@@ -1,0 +1,32 @@
+﻿@{
+    ViewData["Title"] = "Menu";
+}
+
+<h1 class="titulo-menu">Menu Principal</h1>
+
+<div class="blocos">
+    <a asp-controller="Home" asp-action="Analisar" class="bloco bloco-branco">
+        <strong>Analisar</strong>
+        <span>Descrição genérica da página Analisar</span>
+    </a>
+
+    <a asp-controller="Home" asp-action="CriarDeck" class="bloco bloco-azul">
+        <strong>Criar deck</strong>
+        <span>Descrição genérica da página Criar deck</span>
+    </a>
+
+    <a asp-controller="Home" asp-action="Regras" class="bloco bloco-preto">
+        <strong>Regras</strong>
+        <span>Descrição genérica da página Regras</span>
+    </a>
+
+    <a asp-controller="Home" asp-action="Colecoes" class="bloco bloco-vermelho">
+        <strong>Coleções</strong>
+        <span>Descrição genérica da página Coleções</span>
+    </a>
+
+    <a asp-controller="Home" asp-action="Simulacao" class="bloco bloco-verde">
+        <strong>Simulação</strong>
+        <span>Descrição genérica da página Simulação</span>
+    </a>
+</div>

@@ -1,0 +1,362 @@
+﻿@model Diviny.Models.AnalisarViewModel
+@{
+    ViewData["Title"] = "Analisar";
+}
+
+<h1 class="titulo-menu">Analisar deck</h1>
+
+<div class="analisar-layout">
+
+    <!-- ESQUERDA: lista -->
+    <div class="coluna-form">
+        <form asp-action="Analisar" method="post" class="form-deck">
+            <label for="CommanderNome">Quem é o commander?</label>
+            <input type="text" id="CommanderNome" name="CommanderNome" value="@Model.CommanderNome"
+                   placeholder="Ex: Atraxa, Praetors' Voice" class="campo" />
+
+            <label for="ListaTexto">Lista do deck (uma carta por linha, ex: 1 Sol Ring)</label>
+            <textarea id="ListaTexto" name="ListaTexto" rows="20" class="campo"
+                      placeholder="1 Sol Ring&#10;1 Arcane Signet&#10;...">@Model.ListaTexto</textarea>
+
+            <button type="submit" class="botao">Gerar estatísticas</button>
+
+            @if (Model.Deck != null && Model.Stats != null)
+            {
+                <button type="button" class="botao botao-secundario"
+                        data-titulo="Diviny - @Model.Deck.Commander.Nome"
+                        onclick="salvarPdf(this)">
+                    Salvar dados
+                </button>
+            }
+        </form>
+    </div>
+
+    <!-- DIREITA: estatísticas -->
+    <div class="coluna-resultado">
+
+        @if (Model.Erro != null)
+        {
+            <div class="alerta alerta-erro">@Model.Erro</div>
+        }
+
+        @if (Model.Deck != null && Model.Stats != null)
+        {
+            var s = Model.Stats;
+            var maxCurva = Math.Max(1, s.CurvaMana.Values.Max());
+
+            // Dados do gráfico de pizza dos símbolos de mana
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            var coresMana = new[]
+            {
+                new { Chave = "W", Nome = "Branco",   Cor = "#f5f5f5" },
+                new { Chave = "U", Nome = "Azul",     Cor = "#3b82f6" },
+                new { Chave = "B", Nome = "Preto",    Cor = "#1a1a1a" },
+                new { Chave = "R", Nome = "Vermelho", Cor = "#ef4444" },
+                new { Chave = "G", Nome = "Verde",    Cor = "#22c55e" }
+            };
+            var fatias = coresMana
+                .Select(cm => new { cm.Nome, cm.Cor, Valor = s.Simbolos.GetValueOrDefault(cm.Chave) })
+                .Where(fa => fa.Valor > 0)
+                .ToList();
+            var totalSimbolos = fatias.Sum(fa => fa.Valor);
+            var partesGradiente = new List<string>();
+            double acumulado = 0;
+            foreach (var fa in fatias)
+            {
+                var inicio = acumulado;
+                acumulado += fa.Valor * 100.0 / totalSimbolos;
+                partesGradiente.Add($"{fa.Cor} {inicio.ToString("0.##", inv)}% {acumulado.ToString("0.##", inv)}%");
+            }
+            var gradiente = "conic-gradient(" + string.Join(", ", partesGradiente) + ")";
+
+            <div class="resultado">
+                <h2>@Model.Deck.Commander.Nome</h2>
+
+                @if (Model.Deck.Avisos.Any() || Model.Deck.NaoEncontradas.Any())
+                {
+                    <div class="alerta alerta-aviso">
+                        <strong>Avisos</strong>
+                        <ul>
+                            @foreach (var a in Model.Deck.Avisos)
+                            {
+                                <li>@a</li>
+                            }
+                            @foreach (var n in Model.Deck.NaoEncontradas)
+                            {
+                                <li>Carta não encontrada: @n</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <!-- Bracket -->
+                <div class="bracket-box bracket-@s.Bracket">
+                    <div class="bracket-numero">@s.Bracket</div>
+                    <div class="bracket-titulo">Bracket estimado: @s.BracketNome</div>
+                </div>
+
+                <!-- Análise do deck -->
+                @if (Model.Analise != null)
+                {
+                    var ia = Model.Analise;
+
+                    <div class="ia-box">
+                        <h3>Análise do deck</h3>
+                        <p><strong>Estratégia:</strong> @ia.Estrategia</p>
+                        <p>@ia.Resumo</p>
+
+                        <div class="ia-colunas">
+                            <div>
+                                <h4>Pontos fortes</h4>
+                                <ul>
+                                    @foreach (var x in ia.PontosFortes)
+                                    {
+                                        <li>
+                                            @x.Texto
+                                            @if (x.Cartas.Any())
+                                            {
+                                                <div class="chips">
+                                                    @foreach (var carta in x.Cartas)
+                                                    {
+                                                        <span class="chip">@carta</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                            <div>
+                                <h4>Pontos fracos</h4>
+                                <ul>
+                                    @foreach (var x in ia.PontosFracos)
+                                    {
+                                        <li>
+                                            @x.Texto
+                                            @if (x.Cartas.Any())
+                                            {
+                                                <div class="chips">
+                                                    @foreach (var carta in x.Cartas)
+                                                    {
+                                                        <span class="chip">@carta</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+
+                        @if (ia.Sugestoes.Any())
+                        {
+                            <h4>Sugestões</h4>
+                            <ul>
+                                @foreach (var x in ia.Sugestoes)
+                                {
+                                    <li>
+                                        @x.Texto
+                                        @if (x.Cartas.Any())
+                                        {
+                                            <div class="chips">
+                                                @foreach (var carta in x.Cartas)
+                                                {
+                                                    <span class="chip">@carta</span>
+                                                }
+                                            </div>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        <p class="texto-suave">Avaliação do bracket: @ia.Bracket. @ia.BracketJustificativa</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="alerta alerta-aviso">
+                        Análise detalhada indisponível no momento. Os números abaixo continuam válidos.
+                    </div>
+                }
+
+                <!-- Perfil -->
+                <h3>Perfil do deck</h3>
+                <div class="perfil">
+                    @foreach (var p in s.Perfil)
+                    {
+                        <div class="medidor">
+                            <div class="medidor-topo">
+                                <strong>@p.Nome</strong>
+                                <span>@p.Rotulo (@p.Valor)</span>
+                            </div>
+                            <div class="medidor-trilho">
+                                <div class="medidor-barra" style="width:@(p.Valor)%"></div>
+                            </div>
+                            <small class="texto-suave">@p.Descricao</small>
+                        </div>
+                    }
+                </div>
+
+                <!-- Números gerais -->
+                <div class="stats-grid">
+                    <div class="stat"><span>@s.TotalCartas</span>Cartas (sem commander)</div>
+                    <div class="stat"><span>@s.Terrenos</span>Terrenos</div>
+                    <div class="stat"><span>@s.CmcMedio</span>CMC médio</div>
+                    <div class="stat"><span>@s.Rampa</span>Rampa</div>
+                    <div class="stat"><span>@s.Compra</span>Compra de cartas</div>
+                    <div class="stat"><span>@s.Remocao</span>Remoção</div>
+                    <div class="stat"><span>@s.Wipes</span>Wipes</div>
+                    <div class="stat"><span>@s.Tutores</span>Tutores</div>
+                    <div class="stat"><span>@s.GameChangers.Count</span>Game Changers</div>
+                    <div class="stat"><span>$@s.PrecoTotal.ToString("0.00", inv)</span>Preço estimado</div>
+                </div>
+
+                <!-- Cartas por função -->
+                @if (s.CartasPorFuncao.Any())
+                {
+                    <h3>Cartas por função</h3>
+                    foreach (var par in s.CartasPorFuncao)
+                    {
+                        <details class="funcao">
+                            <summary>@par.Key (@par.Value.Count)</summary>
+                            <div class="chips">
+                                @foreach (var carta in par.Value)
+                                {
+                                    <span class="chip">@carta</span>
+                                }
+                            </div>
+                        </details>
+                    }
+                }
+
+                <h3>Curva de mana</h3>
+                <div class="curva">
+                    @foreach (var par in s.CurvaMana)
+                    {
+                        var altura = par.Value * 100 / maxCurva;
+                        <div class="curva-coluna">
+                            <small>@par.Value</small>
+                            <div class="curva-barra" style="height:@(altura)px"></div>
+                            <small>@(par.Key == 7 ? "7+" : par.Key.ToString())</small>
+                        </div>
+                    }
+                </div>
+
+                <h3>Tipos</h3>
+                <ul class="lista-simples">
+                    @foreach (var t in s.Tipos.Where(t => t.Value > 0))
+                    {
+                        <li>@t.Key: <strong>@t.Value</strong></li>
+                    }
+                </ul>
+
+                <!-- Símbolos de mana: gráfico de pizza -->
+                <h3>Símbolos de mana</h3>
+                @if (totalSimbolos == 0)
+                {
+                    <p class="texto-suave">Nenhum símbolo de mana colorido encontrado (deck incolor).</p>
+                }
+                else
+                {
+                    <div class="simbolos">
+                        <div class="pizza" style="background:@Html.Raw(gradiente)"
+                             title="Distribuição dos símbolos de mana"></div>
+
+                        <ul class="pizza-legenda">
+                            @foreach (var fa in fatias)
+                            {
+                                var pct = Math.Round(fa.Valor * 100.0 / totalSimbolos);
+                                <li>
+                                    <span class="pizza-cor" style="background:@fa.Cor"></span>
+                                    <span class="pizza-nome">@fa.Nome</span>
+                                    <strong>@fa.Valor</strong>
+                                    <span class="texto-suave">(@pct.ToString("0")%)</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <!-- Combos -->
+                <h3>Combos</h3>
+
+                @if (Model.Combos == null || !Model.Combos.Disponivel)
+                {
+                    <div class="alerta alerta-aviso">Não consegui consultar os combos agora. As demais estatísticas continuam válidas.</div>
+                }
+                else if (!Model.Combos.IncluidosExibidos.Any() && !Model.Combos.QuaseExibidos.Any())
+                {
+                    <p class="texto-suave">Nenhum combo encontrado para este deck.</p>
+                }
+                else
+                {
+                    @if (Model.Combos.IncluidosExibidos.Any())
+                    {
+                        <h4>Já no deck (@Model.Combos.Incluidos.Count no total)</h4>
+                        @foreach (var c in Model.Combos.IncluidosExibidos)
+                        {
+                            <div class="combo">
+                                <div class="combo-cartas">@string.Join(" + ", c.Cartas)</div>
+                                @if (c.Resultados.Any())
+                                {
+                                    <div class="combo-resultado">→ @string.Join(", ", c.Resultados)</div>
+                                }
+                                <a href="@c.Url" target="_blank" rel="noopener">Ver combo</a>
+                            </div>
+                        }
+                    }
+
+                    @if (Model.Combos.QuaseExibidos.Any())
+                    {
+                        <h4>Falta uma carta</h4>
+                        @foreach (var c in Model.Combos.QuaseExibidos)
+                        {
+                            <div class="combo combo-quase">
+                                <div class="combo-cartas">@string.Join(" + ", c.Cartas)</div>
+                                @if (c.Resultados.Any())
+                                {
+                                    <div class="combo-resultado">→ @string.Join(", ", c.Resultados)</div>
+                                }
+                                <a href="@c.Url" target="_blank" rel="noopener">Ver combo</a>
+                            </div>
+                        }
+                    }
+
+                    <p class="texto-suave">Mostrando até 7 combos, priorizando os mais ligados ao commander e à estratégia do deck.</p>
+                }
+            </div>
+        }
+        else if (Model.Erro == null)
+        {
+            <div class="placeholder-resultado">
+                As estatísticas do deck vão aparecer aqui.
+            </div>
+        }
+    </div>
+</div>
+
+<p><a asp-action="Index" class="link-voltar">← Voltar ao menu</a></p>
+
+@section Scripts {
+    <script>
+        function salvarPdf(botao) {
+            // Abre as listas recolhidas para elas saírem no PDF
+            const detalhes = Array.from(document.querySelectorAll('details'));
+            const estavamAbertos = detalhes.map(d => d.open);
+            detalhes.forEach(d => d.open = true);
+
+            // O nome do arquivo sugerido pelo navegador vem do título da página
+            const tituloOriginal = document.title;
+            document.title = botao.dataset.titulo || 'Diviny - Analise do deck';
+
+            window.addEventListener('afterprint', function restaurar() {
+                document.title = tituloOriginal;
+                detalhes.forEach((d, i) => d.open = estavamAbertos[i]);
+                window.removeEventListener('afterprint', restaurar);
+            });
+
+            window.print();
+        }
+    </script>
+}
