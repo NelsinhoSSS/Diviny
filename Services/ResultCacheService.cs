@@ -1,24 +1,21 @@
-﻿using System.Security.Cryptography;
+﻿using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Diviny.Models;
 
 namespace Diviny.Services
 {
-    // Guarda o resultado completo de cada lista: mesma lista = mesmo resultado
+    // Guarda o resultado completo de cada lista, só na memória:
+    // mesma lista = mesmo resultado, enquanto o site estiver no ar
     public class ResultCacheService
     {
         // Mude este valor quando alterar fórmulas ou regras, para descartar resultados antigos
         private const string Versao = "v2";
 
-        private readonly string _pasta;
-        private readonly ILogger<ResultCacheService> _log;
+        // Limite para a memória não crescer sem controle
+        private const int MaximoGuardado = 200;
 
-        public ResultCacheService(IWebHostEnvironment env, ILogger<ResultCacheService> log)
-        {
-            _pasta = Path.Combine(env.ContentRootPath, "App_Data", "resultados");
-            _log = log;
-        }
+        private static readonly ConcurrentDictionary<string, AnaliseCompleta> Guardados = new();
 
         public static string Chave(Deck deck)
         {
@@ -32,34 +29,16 @@ namespace Diviny.Services
             return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(texto)))[..32];
         }
 
-        public async Task<AnaliseCompleta?> LerAsync(string chave)
-        {
-            try
-            {
-                var caminho = Path.Combine(_pasta, chave + ".json");
-                if (!File.Exists(caminho)) return null;
+        public Task<AnaliseCompleta?> LerAsync(string chave) =>
+            Task.FromResult(Guardados.TryGetValue(chave, out var r) ? r : null);
 
-                return JsonSerializer.Deserialize<AnaliseCompleta>(await File.ReadAllTextAsync(caminho));
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "Não consegui ler o resultado guardado");
-                return null;
-            }
-        }
-
-        public async Task SalvarAsync(string chave, AnaliseCompleta resultado)
+        public Task SalvarAsync(string chave, AnaliseCompleta resultado)
         {
-            try
-            {
-                Directory.CreateDirectory(_pasta);
-                await File.WriteAllTextAsync(Path.Combine(_pasta, chave + ".json"),
-                    JsonSerializer.Serialize(resultado));
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "Não consegui guardar o resultado");
-            }
+            if (Guardados.Count >= MaximoGuardado)
+                Guardados.Clear();
+
+            Guardados[chave] = resultado;
+            return Task.CompletedTask;
         }
     }
 }

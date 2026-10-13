@@ -34,28 +34,21 @@ namespace Diviny.Services
             [{"i":1,"tags":["rampa"]},{"i":2,"tags":[]}]
             """;
 
-        // Estático: o cache é compartilhado entre todas as requisições
+        // Só na memória: compartilhado entre as requisições enquanto o site estiver no ar
         private static readonly ConcurrentDictionary<string, string[]> Cache = new(StringComparer.OrdinalIgnoreCase);
-        private static readonly SemaphoreSlim Trava = new(1, 1);
-        private static bool _carregado;
 
         private readonly AiService _ai;
         private readonly ILogger<CardClassifierService> _log;
-        private readonly string _arquivo;
 
-        public CardClassifierService(AiService ai, IWebHostEnvironment env, ILogger<CardClassifierService> log)
+        public CardClassifierService(AiService ai, ILogger<CardClassifierService> log)
         {
             _ai = ai;
             _log = log;
-            // v2: ignora o cache antigo, que tinha classificações erradas
-            _arquivo = Path.Combine(env.ContentRootPath, "App_Data", "classificacao-cartas-v2.json");
         }
 
         public async Task<Dictionary<string, string[]>?> ClassificarAsync(IEnumerable<Carta> cartas)
         {
             if (!_ai.Configurado) return null;
-
-            await CarregarAsync();
 
             var unicas = cartas.GroupBy(c => c.Nome).Select(g => g.First()).ToList();
 
@@ -65,16 +58,13 @@ namespace Diviny.Services
             var faltando = unicas.Where(c => !Cache.ContainsKey(c.Nome)).ToList();
 
             // Lotes pequenos, um de cada vez: respeita o limite do plano gratuito
-            // e guarda o progresso a cada lote
             foreach (var lote in faltando.Chunk(20))
-            {
                 await ClassificarLoteAsync(lote);
-                await SalvarAsync();
-            }
 
             var resultado = unicas.Where(c => Cache.ContainsKey(c.Nome))
                                   .ToDictionary(c => c.Nome, c => Cache[c.Nome], StringComparer.OrdinalIgnoreCase);
 
+            // Só vale se TODAS as cartas foram classificadas
             return resultado.Count == unicas.Count ? resultado : null;
         }
 
@@ -86,7 +76,7 @@ namespace Diviny.Services
                 var c = lote[i];
                 var texto = c.OracleText.Replace('\n', ' ');
 
-                // Esconde o nome para a IA julgar só pelo texto
+                // Esconde o nome para a classificação ser feita só pelo texto
                 texto = texto.Replace(c.Nome, "~");
                 var frente = c.Nome.Split(" // ")[0];
                 if (frente != c.Nome) texto = texto.Replace(frente, "~");
@@ -125,44 +115,6 @@ namespace Diviny.Services
             {
                 _log.LogWarning(ex, "Resposta de classificação em formato inesperado");
             }
-        }
-
-        private async Task CarregarAsync()
-        {
-            if (_carregado) return;
-            await Trava.WaitAsync();
-            try
-            {
-                if (_carregado) return;
-                if (File.Exists(_arquivo))
-                {
-                    var dados = JsonSerializer.Deserialize<Dictionary<string, string[]>>(
-                        await File.ReadAllTextAsync(_arquivo));
-                    if (dados != null)
-                        foreach (var par in dados) Cache[par.Key] = par.Value;
-                }
-                _carregado = true;
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "Não consegui ler o cache de classificação");
-            }
-            finally { Trava.Release(); }
-        }
-
-        private async Task SalvarAsync()
-        {
-            await Trava.WaitAsync();
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(_arquivo)!);
-                await File.WriteAllTextAsync(_arquivo, JsonSerializer.Serialize(Cache));
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "Não consegui salvar o cache de classificação");
-            }
-            finally { Trava.Release(); }
         }
     }
 }
