@@ -842,3 +842,46 @@ body {
         break-inside: avoid;
     }
 }
+
+/* Menu em duas linhas, centralizado */
+.menu-linhas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+.menu-linha {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+}
+
+    /* Blocos da primeira linha: mantêm a largura, mas crescem se o texto precisar */
+    .menu-linha .bloco {
+        height: auto;
+        min-height: 120px;
+    }
+
+/* Blocos maiores da segunda linha */
+.bloco-grande {
+    width: 290px;
+    min-height: 150px;
+    padding: 20px;
+}
+
+    .bloco-grande strong {
+        font-size: 1.2rem;
+    }
+
+    .bloco-grande span {
+        font-size: 1rem;
+    }
+
+@media (max-width: 700px) {
+    .menu-linha .bloco,
+    .bloco-grande {
+        width: 100%;
+    }
+}
