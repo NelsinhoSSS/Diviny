@@ -1,6 +1,7 @@
 using Diviny.Models;
 using Diviny.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Diviny.Controllers
 {
@@ -32,6 +33,7 @@ namespace Diviny.Controllers
         public IActionResult Analisar() => View(new AnalisarViewModel());
 
         [HttpPost]
+        [EnableRateLimiting("analise")]
         public async Task<IActionResult> Analisar(AnalisarViewModel model)
         {
             if (string.IsNullOrWhiteSpace(model.CommanderNome))
