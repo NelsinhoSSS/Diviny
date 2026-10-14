@@ -78,8 +78,7 @@ namespace Diviny.Services
 
                 // Esconde o nome para a classificação ser feita só pelo texto
                 texto = texto.Replace(c.Nome, "~");
-                var frente = c.Nome.Split(" // ")[0];
-                if (frente != c.Nome) texto = texto.Replace(frente, "~");
+                texto = texto.Replace(ScryfallService.Frente(c.Nome), "~");
 
                 if (texto.Length > 200) texto = texto[..200];
                 sb.AppendLine($"{i + 1} | {c.TypeLine} | {texto}");

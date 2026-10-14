@@ -310,17 +310,19 @@
                     @if (Model.Combos.QuaseExibidos.Any())
                     {
                         <h4>Falta uma carta</h4>
-                        @foreach (var c in Model.Combos.QuaseExibidos)
-                        {
-                            <div class="combo combo-quase">
-                                <div class="combo-cartas">@string.Join(" + ", c.Cartas)</div>
-                                @if (c.Resultados.Any())
-                                {
-                                    <div class="combo-resultado">→ @string.Join(", ", c.Resultados)</div>
-                                }
-                                <a href="@c.Url" target="_blank" rel="noopener">Ver combo</a>
-                            </div>
-                        }
+                        <div class="combos-quase">
+                            @foreach (var c in Model.Combos.QuaseExibidos)
+                            {
+                                <div class="combo">
+                                    <div class="combo-cartas">@string.Join(" + ", c.Cartas)</div>
+                                    @if (c.Resultados.Any())
+                                    {
+                                        <div class="combo-resultado">→ @string.Join(", ", c.Resultados)</div>
+                                    }
+                                    <a href="@c.Url" target="_blank" rel="noopener">Ver combo</a>
+                                </div>
+                            }
+                        </div>
                     }
 
                     <p class="texto-suave">Mostrando até 7 combos, priorizando os mais ligados ao commander e à estratégia do deck.</p>
@@ -331,7 +333,6 @@
         {
             <div class="placeholder-resultado">
                 As estatísticas do deck vão aparecer aqui.
-                (pode demorar alguns segundos para processar)
             </div>
         }
     </div>

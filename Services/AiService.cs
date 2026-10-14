@@ -17,9 +17,14 @@ namespace Diviny.Services
             _log = log;
         }
 
-        public bool Configurado => !string.IsNullOrWhiteSpace(_cfg["Groq:ApiKey"]);
-        public string ModeloClassificacao => _cfg["Groq:ModelClassificacao"] ?? "openai/gpt-oss-20b";
-        public string ModeloAnalise => _cfg["Groq:ModelAnalise"] ?? "openai/gpt-oss-120b";
+        // Os modelos ficam só no appsettings.json
+        public string ModeloClassificacao => _cfg["Groq:ModelClassificacao"] ?? "";
+        public string ModeloAnalise => _cfg["Groq:ModelAnalise"] ?? "";
+
+        public bool Configurado =>
+            !string.IsNullOrWhiteSpace(_cfg["Groq:ApiKey"]) &&
+            !string.IsNullOrWhiteSpace(ModeloClassificacao) &&
+            !string.IsNullOrWhiteSpace(ModeloAnalise);
 
         public async Task<string?> PerguntarAsync(string modelo, string sistema, string usuario, int maxTokens = 2000)
         {

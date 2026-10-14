@@ -5,6 +5,14 @@ using Diviny.Models;
 
 namespace Diviny.Services
 {
+    // O que fica guardado para uma lista de deck
+    public class AnaliseCompleta
+    {
+        public DeckStats Stats { get; set; } = new();
+        public AnaliseIA? Analise { get; set; }
+        public ComboResultado Combos { get; set; } = new();
+    }
+
     // Guarda o resultado completo de cada lista, só na memória:
     // mesma lista = mesmo resultado, enquanto o site estiver no ar
     public class ResultCacheService

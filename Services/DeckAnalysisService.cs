@@ -111,14 +111,14 @@ namespace Diviny.Services
             }
         }
 
-        // Descarta nomes de cartas que a IA citou mas que não existem no deck
+        // Descarta nomes de cartas que a análise citou mas que não existem no deck
         private static void ValidarCartas(AnaliseIA analise, Deck deck)
         {
             var nomes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var c in deck.Cartas.Append(deck.Commander))
             {
                 nomes.Add(c.Nome);
-                nomes.Add(c.Nome.Split(" // ")[0]);
+                nomes.Add(ScryfallService.Frente(c.Nome));
             }
 
             foreach (var ponto in analise.PontosFortes.Concat(analise.PontosFracos).Concat(analise.Sugestoes))

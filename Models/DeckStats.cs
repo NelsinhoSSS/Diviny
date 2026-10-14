@@ -5,7 +5,6 @@
         public string Nome { get; set; } = "";
         public int Valor { get; set; }              // valor final (0 a 100)
         public int ValorCodigo { get; set; }        // só o cálculo
-        public int? ValorIA { get; set; }           // nota da IA, se houver
         public string Rotulo { get; set; } = "";
         public string Descricao { get; set; } = "";
         public string[] Rotulos { get; set; } = Array.Empty<string>();
@@ -33,7 +32,6 @@
 
         // Combos
         public int CombosCompletos { get; set; }
-        public int CombosQuase { get; set; }
         public int CombosFinais { get; set; }       // infinitos ou que ganham o jogo
         public int CombosDoisCartas { get; set; }   // finais com 2 cartas
 
@@ -49,8 +47,6 @@
         // Perfil
         public int Bracket { get; set; }
         public string BracketNome { get; set; } = "";
-        public List<string> BracketMotivos { get; set; } = new();
         public List<Pontuacao> Perfil { get; set; } = new();
-        public bool ClassificadoPorIA { get; set; }
     }
 }

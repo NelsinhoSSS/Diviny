@@ -13,7 +13,8 @@ namespace Diviny.Services
         private static readonly Regex WipeRx = new(@"(destroy|exile) all|each creature", Op);
         private static readonly Regex TutorRx = new(@"search your library for [^.]*", Op);
         private static readonly Regex TurnoExtraRx = new(@"extra turns?", Op);
-        private static readonly Regex TerrasRx = new(@"(destroy|exile) all [^.]*\blands?\b|sacrifices? all [^.]*\blands?\b|each player sacrifices (all|two|three|four|five|x|half)[^.]*\blands?\b", Op);
+        private static readonly Regex TerrasRx = new(
+            @"(destroy|exile) all [^.]*\blands?\b|sacrifices? all [^.]*\blands?\b|each player sacrifices (all|two|three|four|five|x|half)[^.]*\blands?\b", Op);
         private static readonly Regex ContraRx = new(@"counter target", Op);
         private static readonly Regex ProtecaoRx = new(@"hexproof|indestructible|protection from|phase out", Op);
         private static readonly Regex VidaRx = new(@"you gain \d+ life|lifelink", Op);
@@ -30,6 +31,7 @@ namespace Diviny.Services
         private static bool TutorPorTexto(string texto) =>
             TutorRx.Matches(texto).Any(m => !m.Value.Contains("land", StringComparison.OrdinalIgnoreCase));
 
+        // Etiquetas que mexem no bracket só valem se o texto da carta também confirmar
         private static readonly Dictionary<string, Func<string, bool>> Verificadores = new()
         {
             ["destruicao_terras"] = t => TerrasRx.IsMatch(t),
@@ -39,12 +41,9 @@ namespace Diviny.Services
 
         public DeckStats Calcular(Deck deck, ComboResultado? combos = null, Dictionary<string, string[]>? tags = null)
         {
-            var s = new DeckStats
-            {
-                TotalCartas = deck.TotalCartas,
-                ClassificadoPorIA = tags != null && tags.Count > 0
-            };
+            var s = new DeckStats { TotalCartas = deck.TotalCartas };
 
+            // Usa a etiqueta da classificação quando existe; senão, cai no padrão de texto
             bool Tem(Carta c, string tag, Func<string, bool> porTexto)
             {
                 if (tags != null && tags.TryGetValue(c.Nome, out var t))
@@ -134,7 +133,6 @@ namespace Diviny.Services
             if (combos is { Disponivel: true })
             {
                 s.CombosCompletos = combos.Incluidos.Count;
-                s.CombosQuase = combos.QuaseIncluidos.Count;
 
                 var finais = combos.Incluidos.Where(c => c.Resultados.Any(r =>
                     r.Contains("infinite", StringComparison.OrdinalIgnoreCase) ||
@@ -211,7 +209,7 @@ namespace Diviny.Services
             return s;
         }
 
-        // Mistura: 60% cálculo, 40% IA
+        // Mistura: 60% cálculo, 40% análise do deck
         public void AplicarIA(DeckStats s, AnaliseIA ia)
         {
             var notas = new Dictionary<string, int>
@@ -227,7 +225,6 @@ namespace Diviny.Services
             {
                 if (!notas.TryGetValue(p.Nome, out var nota)) continue;
                 nota = Math.Clamp(nota, 0, 100);
-                p.ValorIA = nota;
                 p.Definir((int)Math.Round(0.6 * p.ValorCodigo + 0.4 * nota));
             }
         }
@@ -235,31 +232,21 @@ namespace Diviny.Services
         private static void CalcularBracket(DeckStats s, int velocidade)
         {
             int b = 2;
-            var m = s.BracketMotivos;
+            void Subir(int minimo) => b = Math.Max(b, minimo);
 
-            string Nomes(string funcao) =>
-                s.CartasPorFuncao.TryGetValue(funcao, out var l) ? string.Join(", ", l.Take(8)) : "";
+            if (s.GameChangers.Count > 0) Subir(3);
+            if (s.GameChangers.Count > 3) Subir(4);
+            if (s.DestruicaoTerras > 0) Subir(4);
+            if (s.TurnosExtras >= 2) Subir(3);
+            if (s.TurnosExtras >= 4) Subir(4);
+            if (s.Tutores >= 3) Subir(3);
+            if (s.Tutores >= 6) Subir(4);
 
-            void Subir(int minimo, string motivo)
-            {
-                b = Math.Max(b, minimo);
-                m.Add(motivo);
-            }
-
-            if (s.GameChangers.Count > 0) Subir(3, $"{s.GameChangers.Count} Game Changer(s): {string.Join(", ", s.GameChangers.Take(6))}");
-            if (s.GameChangers.Count > 3) Subir(4, "Mais de 3 Game Changers");
-            if (s.DestruicaoTerras > 0) Subir(4, $"Destruição em massa de terrenos: {Nomes("Destruição de terrenos")}");
-            if (s.TurnosExtras >= 2) Subir(3, $"{s.TurnosExtras} cartas de turno extra: {Nomes("Turnos extras")}");
-            if (s.TurnosExtras >= 4) Subir(4, "Muitos turnos extras");
-            if (s.Tutores >= 3) Subir(3, $"{s.Tutores} tutores: {Nomes("Tutores")}");
-            if (s.Tutores >= 6) Subir(4, "Muitos tutores");
-            if (s.CombosDoisCartas >= 1) Subir(4, $"{s.CombosDoisCartas} combo(s) de 2 cartas que vencem ou são infinitos");
-            else if (s.CombosFinais >= 1) Subir(3, $"{s.CombosFinais} combo(s) finais");
+            if (s.CombosDoisCartas >= 1) Subir(4);
+            else if (s.CombosFinais >= 1) Subir(3);
 
             if (b >= 4 && s.Tutores >= 6 && s.CombosDoisCartas >= 2 && s.CmcMedio <= 2.6 && velocidade >= 70)
-                Subir(5, "Perfil compatível com cEDH (rápido, muitos tutores e combos de 2 cartas)");
-
-            if (m.Count == 0) m.Add("Nenhum sinal de alto poder encontrado");
+                Subir(5);
 
             s.Bracket = b;
             s.BracketNome = NomesBracket[b];

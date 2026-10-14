@@ -66,8 +66,7 @@ namespace Diviny.Services
             {
                 var combo = new Combo
                 {
-                    Id = v.TryGetProperty("id", out var id) ? id.ToString() : "",
-                    Descricao = Texto(v, "description")
+                    Id = v.TryGetProperty("id", out var id) ? id.ToString() : ""
                 };
 
                 if (v.TryGetProperty("popularity", out var pop) &&
@@ -89,9 +88,5 @@ namespace Diviny.Services
 
             return lista;
         }
-
-        private static string Texto(JsonElement e, string prop) =>
-            e.TryGetProperty(prop, out var v) && v.ValueKind == JsonValueKind.String
-                ? v.GetString() ?? "" : "";
     }
 }
