@@ -798,3 +798,120 @@ h1, h2, h3, h4, h5, h6 {
         break-inside: avoid;
     }
 }
+
+/* ===== Criar Deck ===== */
+.escondido {
+    display: none !important;
+}
+
+/* Círculo para marcar */
+.check-redondo {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    border: 2px solid var(--texto-suave);
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+    .check-redondo:checked {
+        border-color: var(--destaque);
+        background: radial-gradient(circle, var(--destaque) 0 40%, transparent 45%);
+    }
+
+.opcao {
+    margin-top: 12px;
+}
+
+.form-deck .opcao-rotulo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0;
+    color: var(--texto);
+    cursor: pointer;
+}
+
+.painel-especificacoes {
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    background: var(--fundo-claro);
+    padding: 4px 16px 16px;
+    margin-top: 8px;
+}
+
+.opcao-campos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    margin: 8px 0 0 30px;
+}
+
+.form-deck .opcao-campos label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+}
+
+.campo-curto {
+    width: 100px;
+}
+
+.campo-auto {
+    width: auto;
+}
+
+.soma-total {
+    margin-top: 16px;
+    color: var(--texto-suave);
+    font-size: 0.9rem;
+}
+
+    .soma-total.excedeu {
+        color: #ef4444;
+        font-weight: 600;
+    }
+
+/* Lista pronta */
+.lista-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+    .lista-topo h2 {
+        margin: 0;
+    }
+
+.botao-copiar {
+    margin-top: 0;
+    padding: 8px 22px;
+}
+
+.lista-cartas {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+    columns: 2;
+    column-gap: 24px;
+}
+
+    .lista-cartas li {
+        break-inside: avoid;
+        padding: 2px 0;
+    }
+
+@media (max-width: 700px) {
+    .lista-cartas {
+        columns: 1;
+    }
+}

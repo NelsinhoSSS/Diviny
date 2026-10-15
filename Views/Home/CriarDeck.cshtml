@@ -1,9 +1,215 @@
-﻿@{
-    ViewData["Title"] = "Criar deck";
+﻿@model Diviny.Models.CriarDeckViewModel
+@{
+    ViewData["Title"] = "Criar Deck";
+
+    var nomesBracket = new[] { "", "Exhibition", "Core", "Upgraded", "Optimized", "cEDH" };
+
+    // Na ordem pedida: Criaturas, Artefatos, Encantamentos, Instants, Sorcery, Lands, Planeswalker
+    var opcoes = new[]
+    {
+        new { Chave = "Criaturas",     Nome = "Quantidade de Criaturas",     Usar = Model.UsarCriaturas,     Valor = Model.Criaturas },
+        new { Chave = "Artefatos",     Nome = "Quantidade de Artefatos",     Usar = Model.UsarArtefatos,     Valor = Model.Artefatos },
+        new { Chave = "Encantamentos", Nome = "Quantidade de Encantamentos", Usar = Model.UsarEncantamentos, Valor = Model.Encantamentos },
+        new { Chave = "Instants",      Nome = "Quantidade de Instants",      Usar = Model.UsarInstants,      Valor = Model.Instants },
+        new { Chave = "Sorceries",     Nome = "Quantidade de Sorcery",       Usar = Model.UsarSorceries,     Valor = Model.Sorceries },
+        new { Chave = "Lands",         Nome = "Quantidade de Lands",         Usar = Model.UsarLands,         Valor = Model.Lands },
+        new { Chave = "Planeswalkers", Nome = "Quantidade de Planeswalker", Usar = Model.UsarPlaneswalkers, Valor = Model.Planeswalkers }
+    };
 }
 
-<div class="container py-5">
-    <h1>Criar deck</h1>
-    <p>Conteúdo da página Criar deck.</p>
-    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Voltar ao menu</a>
+<h1 class="titulo-menu">Criar Deck</h1>
+
+<div class="analisar-layout">
+
+    <!-- ESQUERDA: commander e especificações -->
+    <div class="coluna-form">
+        <form asp-action="CriarDeck" method="post" class="form-deck" id="form-criar">
+            <label for="CommanderNome">Quem é o commander?</label>
+            <input type="text" id="CommanderNome" name="CommanderNome" value="@Model.CommanderNome"
+                   placeholder="Ex: Atraxa, Praetors' Voice" class="campo" />
+
+            <div class="opcao">
+                <label class="opcao-rotulo">
+                    <input type="checkbox" class="check-redondo" id="chk-especificacoes"
+                           name="EscolherEspecificacoes" value="true" @(Model.EscolherEspecificacoes ? "checked" : "") />
+                    <span>Escolher especificações</span>
+                </label>
+            </div>
+
+            <div id="painel-especificacoes" class="painel-especificacoes @(Model.EscolherEspecificacoes ? "" : "escondido")">
+                <p class="texto-suave">
+                    Marque só o que quiser definir. O que ficar sem marcar o sistema escolhe sozinho
+                    e, se a soma for menor que 99, ele completa o restante.
+                </p>
+
+                <!-- Bracket -->
+                <div class="opcao">
+                    <label class="opcao-rotulo">
+                        <input type="checkbox" class="check-redondo toggle" name="UsarBracket" value="true"
+                               data-alvo="campo-Bracket" @(Model.UsarBracket ? "checked" : "") />
+                        <span>Escolher bracket?</span>
+                    </label>
+                    <div id="campo-Bracket" class="opcao-campos @(Model.UsarBracket ? "" : "escondido")">
+                        <select name="Bracket" class="campo campo-auto">
+                            @for (var i = 1; i <= 5; i++)
+                            {
+                                <option value="@i" selected="@((Model.Bracket ?? 3) == i)">@i - @nomesBracket[i]</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Quantidades por tipo -->
+                @foreach (var o in opcoes)
+                {
+                    <div class="opcao">
+                        <label class="opcao-rotulo">
+                            <input type="checkbox" class="check-redondo toggle" name="@("Usar" + o.Chave)" value="true"
+                                   data-alvo="@("campo-" + o.Chave)" @(o.Usar ? "checked" : "") />
+                            <span>@o.Nome</span>
+                        </label>
+
+                        <div id="@("campo-" + o.Chave)" class="opcao-campos @(o.Usar ? "" : "escondido")">
+                            @if (o.Chave == "Lands")
+                            {
+                                <label>
+                                    Total
+                                    <input type="number" min="0" max="99" name="Lands" value="@o.Valor"
+                                           class="campo campo-curto qtd" />
+                                </label>
+                                <label>
+                                    Básicas
+                                    <input type="number" min="0" max="99" name="LandsBasicos" value="@Model.LandsBasicos"
+                                           class="campo campo-curto" />
+                                </label>
+                            }
+                            else
+                            {
+                                <input type="number" min="0" max="99" name="@o.Chave" value="@o.Valor"
+                                       class="campo campo-curto qtd" />
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div id="soma-total" class="soma-total"></div>
+            </div>
+
+            <button type="submit" class="botao" id="btn-criar">Criar deck</button>
+        </form>
+    </div>
+
+    <!-- DIREITA: lista pronta -->
+    <div class="coluna-resultado">
+
+        @if (Model.Erro != null)
+        {
+            <div class="alerta alerta-erro">@Model.Erro</div>
+        }
+
+        @if (Model.Resultado != null && Model.Resultado.Grupos.Any())
+        {
+            var r = Model.Resultado;
+
+            <div class="resultado">
+
+                <div class="lista-topo">
+                    <h2>@r.Commander?.Nome</h2>
+                    <button type="button" class="botao botao-secundario botao-copiar" onclick="copiarLista(this)">Copiar</button>
+                </div>
+
+                @if (r.Avisos.Any())
+                {
+                    <div class="alerta alerta-aviso">
+                        <ul>
+                            @foreach (var a in r.Avisos)
+                            {
+                                <li>@a</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <textarea id="lista-plana" class="escondido" readonly>@r.ListaTexto</textarea>
+
+                @foreach (var g in r.Grupos)
+                {
+                    <h3>@g.Titulo (@g.Total)</h3>
+                    <ul class="lista-cartas">
+                        @foreach (var l in g.Linhas)
+                        {
+                            <li>@l.Quantidade @l.Nome</li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+        else if (Model.Erro == null)
+        {
+            <div class="placeholder-resultado">
+                A lista do deck vai aparecer aqui.
+            </div>
+        }
+    </div>
 </div>
+
+<p><a asp-action="Index" class="link-voltar">← Voltar ao menu</a></p>
+
+@section Scripts {
+    <script>
+        const painel = document.getElementById('painel-especificacoes');
+        const principal = document.getElementById('chk-especificacoes');
+
+        principal.addEventListener('change', () => {
+            painel.classList.toggle('escondido', !principal.checked);
+        });
+
+        // Cada opção mostra os seus campos só quando marcada
+        document.querySelectorAll('.toggle').forEach(chk => {
+            chk.addEventListener('change', () => {
+                document.getElementById(chk.dataset.alvo).classList.toggle('escondido', !chk.checked);
+                atualizarSoma();
+            });
+        });
+
+        // Soma das quantidades escolhidas (não conta o campo de básicas)
+        function atualizarSoma() {
+            let soma = 0;
+            document.querySelectorAll('.opcao-campos:not(.escondido) .qtd').forEach(i => {
+                soma += parseInt(i.value) || 0;
+            });
+
+            const el = document.getElementById('soma-total');
+            el.textContent = 'Soma das quantidades: ' + soma + ' de 99';
+            el.classList.toggle('excedeu', soma > 99);
+        }
+
+        document.querySelectorAll('.qtd').forEach(i => i.addEventListener('input', atualizarSoma));
+        atualizarSoma();
+
+        // Indica que está criando
+        document.getElementById('form-criar').addEventListener('submit', () => {
+            const b = document.getElementById('btn-criar');
+            b.disabled = true;
+            b.textContent = 'Criando deck...';
+        });
+
+        // Botão copiar
+        async function copiarLista(botao) {
+            const area = document.getElementById('lista-plana');
+
+            try {
+                await navigator.clipboard.writeText(area.value);
+            } catch {
+                area.classList.remove('escondido');
+                area.select();
+                document.execCommand('copy');
+                area.classList.add('escondido');
+            }
+
+            const original = botao.textContent;
+            botao.textContent = 'Copiado!';
+            setTimeout(() => botao.textContent = original, 2000);
+        }
+    </script>
+}

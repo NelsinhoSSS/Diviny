@@ -14,11 +14,12 @@ namespace Diviny.Controllers
         private readonly CardClassifierService _classificador;
         private readonly DeckAnalysisService _analise;
         private readonly ResultCacheService _cache;
+        private readonly DeckBuilderService _construtor;
 
         public HomeController(DeckService deckService, DeckStatsService statsService,
                               CommanderSpellbookService spellbook,
                               CardClassifierService classificador, DeckAnalysisService analise,
-                              ResultCacheService cache)
+                              ResultCacheService cache, DeckBuilderService construtor)
         {
             _deckService = deckService;
             _statsService = statsService;
@@ -26,9 +27,12 @@ namespace Diviny.Controllers
             _classificador = classificador;
             _analise = analise;
             _cache = cache;
+            _construtor = construtor;
         }
 
         public IActionResult Index() => View();
+
+        // ===== Analisar =====
 
         [HttpGet]
         public IActionResult Analisar() => View(new AnalisarViewModel());
@@ -94,7 +98,87 @@ namespace Diviny.Controllers
             return View(model);
         }
 
-        public IActionResult CriarDeck() => View();
+        // ===== Criar deck =====
+
+        [HttpGet]
+        public IActionResult CriarDeck() => View(new CriarDeckViewModel());
+
+        [HttpPost]
+        [EnableRateLimiting("analise")]
+        public async Task<IActionResult> CriarDeck(CriarDeckViewModel model)
+        {
+            if (string.IsNullOrWhiteSpace(model.CommanderNome))
+            {
+                model.Erro = "Informe quem é o commander.";
+                return View(model);
+            }
+
+            var pedido = new PedidoDeck { CommanderNome = model.CommanderNome.Trim() };
+
+            // As opções só valem se "Escolher especificações" estiver marcado
+            if (model.EscolherEspecificacoes)
+            {
+                var erroPedido = MontarPedido(model, pedido);
+                if (erroPedido != null)
+                {
+                    model.Erro = erroPedido;
+                    return View(model);
+                }
+            }
+
+            var resultado = await _construtor.CriarAsync(pedido);
+            if (resultado.Erro != null)
+            {
+                model.Erro = resultado.Erro;
+                return View(model);
+            }
+
+            model.Resultado = resultado;
+            return View(model);
+        }
+
+        private static string? MontarPedido(CriarDeckViewModel m, PedidoDeck pedido)
+        {
+            if (m.UsarBracket)
+            {
+                if (m.Bracket is >= 1 and <= 5) pedido.Bracket = m.Bracket;
+                else return "Escolha um bracket de 1 a 5.";
+            }
+
+            var itens = new (bool Usar, int? Valor, string Chave, string Nome)[]
+            {
+                (m.UsarCriaturas,     m.Criaturas,     "Creature",     "Criaturas"),
+                (m.UsarArtefatos,     m.Artefatos,     "Artifact",     "Artefatos"),
+                (m.UsarEncantamentos, m.Encantamentos, "Enchantment",  "Encantamentos"),
+                (m.UsarInstants,      m.Instants,      "Instant",      "Instants"),
+                (m.UsarSorceries,     m.Sorceries,     "Sorcery",      "Sorcery"),
+                (m.UsarLands,         m.Lands,         "Land",         "Lands"),
+                (m.UsarPlaneswalkers, m.Planeswalkers, "Planeswalker", "Planeswalkers")
+            };
+
+            foreach (var (usar, valor, chave, nome) in itens)
+            {
+                if (!usar) continue;
+
+                if (valor is null or < 0 or > 999)
+                    return $"Informe uma quantidade válida de {nome} (ou desmarque a opção).";
+
+                pedido.Quantidades[chave] = valor.Value;
+            }
+
+            if (m.UsarLands && m.LandsBasicos is int basicos)
+            {
+                if (basicos < 0 || basicos > 999)
+                    return "Informe uma quantidade válida de terrenos básicos.";
+
+                pedido.Basicos = basicos;
+            }
+
+            return null;
+        }
+
+        // ===== Outras páginas =====
+
         public IActionResult Regras() => View();
         public IActionResult Colecoes() => View();
         public IActionResult Simulacao() => View();

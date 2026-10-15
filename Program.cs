@@ -54,6 +54,7 @@ builder.Services.AddScoped<DeckStatsService>();
 builder.Services.AddScoped<CardClassifierService>();
 builder.Services.AddScoped<DeckAnalysisService>();
 builder.Services.AddScoped<ResultCacheService>();
+builder.Services.AddScoped<DeckBuilderService>();
 
 var app = builder.Build();
 

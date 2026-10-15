@@ -21,7 +21,9 @@ namespace Diviny.Services
             return Mapear(doc.RootElement);
         }
 
-        public async Task<(List<Carta> Encontradas, List<string> NaoEncontradas)> BuscarVariasAsync(IEnumerable<string> nomes)
+        // aproximar = true: nomes não encontrados são tentados com busca aproximada (erros de digitação)
+        public async Task<(List<Carta> Encontradas, List<string> NaoEncontradas)> BuscarVariasAsync(
+            IEnumerable<string> nomes, bool aproximar = true)
         {
             var encontradas = new List<Carta>();
             var naoEncontradas = new List<string>();
@@ -59,6 +61,12 @@ namespace Diviny.Services
                 await Task.Delay(100); // respeita o limite do Scryfall
             }
 
+            if (!aproximar)
+            {
+                naoEncontradas.AddRange(pendentes);
+                return (encontradas, naoEncontradas);
+            }
+
             // Segunda chance: busca aproximada, uma a uma
             foreach (var nome in pendentes)
             {
@@ -74,6 +82,31 @@ namespace Diviny.Services
             return (encontradas, naoEncontradas);
         }
 
+        // Busca com a sintaxe do Scryfall, das cartas mais populares para as menos
+        public async Task<List<Carta>> PesquisarAsync(string consulta, int maxPaginas = 2)
+        {
+            var lista = new List<Carta>();
+
+            for (int pagina = 1; pagina <= maxPaginas; pagina++)
+            {
+                var url = $"cards/search?q={Uri.EscapeDataString(consulta)}&order=edhrec&unique=cards&page={pagina}";
+                var resp = await _http.GetAsync(url);
+                if (!resp.IsSuccessStatusCode) break;   // 404 = nenhum resultado
+
+                using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+
+                foreach (var c in doc.RootElement.GetProperty("data").EnumerateArray())
+                    lista.Add(Mapear(c));
+
+                await Task.Delay(100);
+
+                if (!(doc.RootElement.TryGetProperty("has_more", out var mais) && mais.ValueKind == JsonValueKind.True))
+                    break;
+            }
+
+            return lista;
+        }
+
         private static Carta Mapear(JsonElement e)
         {
             var carta = new Carta
@@ -86,6 +119,10 @@ namespace Diviny.Services
             };
 
             carta.GameChanger = e.TryGetProperty("game_changer", out var gc) && gc.ValueKind == JsonValueKind.True;
+
+            carta.LegalCommander = e.TryGetProperty("legalities", out var leg) &&
+                                   leg.TryGetProperty("commander", out var lc) &&
+                                   lc.GetString() == "legal";
 
             if (e.TryGetProperty("power", out var pw) && pw.ValueKind == JsonValueKind.String
                 && int.TryParse(pw.GetString(), out var poder))
