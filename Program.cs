@@ -14,16 +14,26 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     o.KnownProxies.Clear();
 });
 
-// Limite de análises por visitante (protege a cota do Groq)
+// Limites por visitante (protegem a cota gratuita da IA)
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
     o.AddPolicy("analise", ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "anonimo",
         _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 5,
             Window = TimeSpan.FromMinutes(10),
+            QueueLimit = 0
+        }));
+
+    o.AddPolicy("chat", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "anonimo",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(5),
             QueueLimit = 0
         }));
 });
@@ -55,6 +65,8 @@ builder.Services.AddScoped<CardClassifierService>();
 builder.Services.AddScoped<DeckAnalysisService>();
 builder.Services.AddScoped<ResultCacheService>();
 builder.Services.AddScoped<DeckBuilderService>();
+builder.Services.AddScoped<RulesChatService>();
+builder.Services.AddScoped<RulesService>();
 
 var app = builder.Build();
 

@@ -15,11 +15,13 @@ namespace Diviny.Controllers
         private readonly DeckAnalysisService _analise;
         private readonly ResultCacheService _cache;
         private readonly DeckBuilderService _construtor;
+        private readonly RulesChatService _regrasChat;
 
         public HomeController(DeckService deckService, DeckStatsService statsService,
                               CommanderSpellbookService spellbook,
                               CardClassifierService classificador, DeckAnalysisService analise,
-                              ResultCacheService cache, DeckBuilderService construtor)
+                              ResultCacheService cache, DeckBuilderService construtor,
+                              RulesChatService regrasChat)
         {
             _deckService = deckService;
             _statsService = statsService;
@@ -28,6 +30,7 @@ namespace Diviny.Controllers
             _analise = analise;
             _cache = cache;
             _construtor = construtor;
+            _regrasChat = regrasChat;
         }
 
         public IActionResult Index() => View();
@@ -177,9 +180,23 @@ namespace Diviny.Controllers
             return null;
         }
 
-        // ===== Outras páginas =====
+        // ===== Regras (chat) =====
 
         public IActionResult Regras() => View();
+
+        [HttpPost]
+        [EnableRateLimiting("chat")]
+        public async Task<IActionResult> PerguntarRegras([FromBody] PerguntaRegras p)
+        {
+            if (p == null || string.IsNullOrWhiteSpace(p.Pergunta) || p.Pergunta.Length > 600)
+                return BadRequest(new { resposta = "Escreva uma pergunta de até 600 caracteres." });
+
+            var resposta = await _regrasChat.ResponderAsync(p.Pergunta.Trim(), p.Historico ?? new());
+            return Json(new { resposta });
+        }
+
+        // ===== Outras páginas =====
+
         public IActionResult Colecoes() => View();
         public IActionResult Simulacao() => View();
 

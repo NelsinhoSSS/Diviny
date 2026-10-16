@@ -21,6 +21,33 @@ namespace Diviny.Services
             return Mapear(doc.RootElement);
         }
 
+        // Carta + rulings oficiais (esclarecimentos de regras publicados para a carta)
+        public async Task<(Carta Carta, List<string> Rulings)?> BuscarComRulingsAsync(string nome)
+        {
+            var resp = await _http.GetAsync($"cards/named?fuzzy={Uri.EscapeDataString(nome)}");
+            if (!resp.IsSuccessStatusCode) return null;
+
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var carta = Mapear(doc.RootElement);
+            var rulings = new List<string>();
+
+            if (doc.RootElement.TryGetProperty("rulings_uri", out var uri) && uri.ValueKind == JsonValueKind.String)
+            {
+                await Task.Delay(100); // respeita o limite do Scryfall
+                var r = await _http.GetAsync(uri.GetString());
+
+                if (r.IsSuccessStatusCode)
+                {
+                    using var docR = JsonDocument.Parse(await r.Content.ReadAsStringAsync());
+                    foreach (var item in docR.RootElement.GetProperty("data").EnumerateArray())
+                        if (item.TryGetProperty("comment", out var c) && c.ValueKind == JsonValueKind.String)
+                            rulings.Add(c.GetString() ?? "");
+                }
+            }
+
+            return (carta, rulings);
+        }
+
         // aproximar = true: nomes não encontrados são tentados com busca aproximada (erros de digitação)
         public async Task<(List<Carta> Encontradas, List<string> NaoEncontradas)> BuscarVariasAsync(
             IEnumerable<string> nomes, bool aproximar = true)

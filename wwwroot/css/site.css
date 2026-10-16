@@ -915,3 +915,82 @@ h1, h2, h3, h4, h5, h6 {
         columns: 1;
     }
 }
+
+/* ===== Chat de regras ===== */
+.chat {
+    max-width: 800px;
+    margin: 0 auto 24px;
+}
+
+.chat-mensagens {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 55vh;
+    min-height: 300px;
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--fundo-claro);
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+}
+
+.msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    white-space: pre-wrap; /* mantém as quebras de linha da resposta */
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+}
+
+.msg-bot {
+    align-self: flex-start;
+    background: var(--fundo);
+    border: 1px solid var(--borda);
+}
+
+.msg-user {
+    align-self: flex-end;
+    background: var(--destaque);
+    color: white;
+}
+
+.msg-carregando {
+    color: var(--texto-suave);
+    font-style: italic;
+}
+
+.chat-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    align-items: stretch;
+}
+
+    .chat-form .campo {
+        resize: none;
+    }
+
+    .chat-form .botao {
+        margin-top: 0;
+        padding: 0 24px;
+    }
+
+        .chat-form .botao:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+.botao-link {
+    margin-top: 8px;
+    background: none;
+    border: none;
+    color: var(--texto-suave);
+    cursor: pointer;
+    padding: 0;
+}
+
+    .botao-link:hover {
+        color: var(--texto);
+    }

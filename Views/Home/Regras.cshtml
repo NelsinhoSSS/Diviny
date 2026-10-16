@@ -2,8 +2,105 @@
     ViewData["Title"] = "Regras";
 }
 
-<div class="container py-5">
-    <h1>Regras</h1>
-    <p>Conteúdo da página Regras.</p>
-    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Voltar ao menu</a>
+<h1 class="titulo-menu">Regras</h1>
+
+<div class="chat">
+    <div id="chat-mensagens" class="chat-mensagens">
+        <div class="msg msg-bot">Olá! Sou o assistente de regras de Magic: The Gathering. Pergunte sobre regras e interações entre cartas, por exemplo: "O que acontece se uma criatura com deathtouch e trample ataca um bloqueador com 1 de resistência?"</div>
+    </div>
+
+    <form id="chat-form" class="chat-form">
+        <textarea id="chat-input" class="campo" rows="2" maxlength="600"
+                  placeholder="Escreva sua pergunta (Enter envia, Shift+Enter quebra a linha)"></textarea>
+        <button type="submit" class="botao" id="chat-enviar">Enviar</button>
+    </form>
+
+    <button type="button" class="botao-link" id="chat-limpar">Limpar conversa</button>
 </div>
+
+<p><a asp-action="Index" class="link-voltar">← Voltar ao menu</a></p>
+
+@section Scripts {
+    <script>
+        const urlPergunta = '@Url.Action("PerguntarRegras", "Home")';
+        const lista = document.getElementById('chat-mensagens');
+        const form = document.getElementById('chat-form');
+        const input = document.getElementById('chat-input');
+        const botao = document.getElementById('chat-enviar');
+        const mensagemInicial = lista.innerHTML;
+
+        let historico = [];
+        let enviando = false;
+
+        function adicionar(papel, texto) {
+            const div = document.createElement('div');
+            div.className = 'msg ' + (papel === 'user' ? 'msg-user' : 'msg-bot');
+            div.textContent = texto;          // textContent: nunca interpreta HTML
+            lista.appendChild(div);
+            lista.scrollTop = lista.scrollHeight;
+            return div;
+        }
+
+        // Enter envia; Shift+Enter quebra a linha
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.requestSubmit();
+            }
+        });
+
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+
+            const pergunta = input.value.trim();
+            if (!pergunta || enviando) return;
+
+            enviando = true;
+            botao.disabled = true;
+            input.value = '';
+
+            adicionar('user', pergunta);
+            const carregando = adicionar('bot', 'Consultando as regras...');
+            carregando.classList.add('msg-carregando');
+
+            let texto, ok = false;
+
+            try {
+                const r = await fetch(urlPergunta, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pergunta, historico: historico.slice(-6) })
+                });
+
+                if (r.status === 429) {
+                    texto = 'Muitas perguntas em pouco tempo. Aguarde alguns minutos e tente de novo.';
+                } else if (!r.ok) {
+                    texto = 'Algo deu errado. Tente novamente.';
+                } else {
+                    texto = (await r.json()).resposta;
+                    ok = true;
+                }
+            } catch {
+                texto = 'Não consegui conectar. Tente novamente.';
+            }
+
+            carregando.textContent = texto;
+            carregando.classList.remove('msg-carregando');
+            lista.scrollTop = lista.scrollHeight;
+
+            if (ok) {
+                historico.push({ papel: 'user', texto: pergunta });
+                historico.push({ papel: 'assistant', texto });
+            }
+
+            enviando = false;
+            botao.disabled = false;
+            input.focus();
+        });
+
+        document.getElementById('chat-limpar').addEventListener('click', () => {
+            historico = [];
+            lista.innerHTML = mensagemInicial;
+        });
+    </script>
+}
