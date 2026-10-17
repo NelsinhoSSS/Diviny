@@ -994,3 +994,179 @@ h1, h2, h3, h4, h5, h6 {
     .botao-link:hover {
         color: var(--texto);
     }
+
+/* ===== Coleções ===== */
+.busca-colecao {
+    display: flex;
+    gap: 10px;
+    max-width: 700px;
+    margin: 0 auto 24px;
+}
+
+    .busca-colecao .campo {
+        flex: 1;
+    }
+
+    .busca-colecao .botao {
+        margin-top: 0;
+        padding: 0 26px;
+    }
+
+.colecao-bloco {
+    margin-bottom: 24px;
+}
+
+.colecao-cabecalho {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+    .colecao-cabecalho h2 {
+        margin: 0;
+    }
+
+.set-icone {
+    width: 40px;
+    height: 40px;
+    filter: invert(1); /* o ícone vem preto: inverte para aparecer no tema escuro */
+}
+
+.lista-colecoes {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+
+/* Filtros */
+.filtros {
+    background: var(--fundo-claro);
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+}
+
+.filtro-grupo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.filtro-titulo {
+    min-width: 50px;
+    color: var(--texto-suave);
+    font-weight: 600;
+}
+
+.pill {
+    position: relative;
+    margin: 0;
+    cursor: pointer;
+}
+
+    .pill input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .pill span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border: 1px solid var(--borda);
+        border-radius: 999px;
+        background: var(--fundo);
+        font-size: 0.9rem;
+        user-select: none;
+    }
+
+.pill-cor::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--cor);
+    border: 1px solid #8a8aa0;
+}
+
+.pill input:checked + span {
+    border-color: var(--destaque);
+    background: rgba(124, 58, 237, 0.25);
+}
+
+.pill input:focus-visible + span {
+    outline: 2px solid var(--destaque);
+}
+
+.filtro-rodape {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+    .filtro-rodape .botao-link {
+        margin-top: 0;
+    }
+
+/* Grade de cartas */
+.grade-cartas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.carta-item {
+    display: block;
+    border-radius: 4.75%;
+    transition: transform 0.15s ease;
+}
+
+    .carta-item:hover {
+        transform: translateY(-4px);
+    }
+
+    .carta-item img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 4.75%;
+        background: var(--fundo-claro);
+        aspect-ratio: 488 / 680;
+    }
+
+.carta-sem-imagem {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    aspect-ratio: 488 / 680;
+    text-align: center;
+    color: var(--texto-suave);
+    background: var(--fundo-claro);
+    border: 1px solid var(--borda);
+    border-radius: 4.75%;
+}
+
+@media (max-width: 600px) {
+    .busca-colecao {
+        flex-direction: column;
+    }
+
+        .busca-colecao .botao {
+            padding: 10px;
+        }
+
+    .grade-cartas {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    }
+}

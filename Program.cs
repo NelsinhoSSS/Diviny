@@ -14,7 +14,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     o.KnownProxies.Clear();
 });
 
-// Limites por visitante (protegem a cota gratuita da IA)
+// Limites por visitante (protegem a cota gratuita da IA e a do Scryfall)
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -36,6 +36,15 @@ builder.Services.AddRateLimiter(o =>
             Window = TimeSpan.FromMinutes(5),
             QueueLimit = 0
         }));
+
+    o.AddPolicy("colecoes", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "anonimo",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20,
+            Window = TimeSpan.FromMinutes(5),
+            QueueLimit = 0
+        }));
 });
 
 builder.Services.AddHttpClient<ScryfallService>(c =>
@@ -43,6 +52,14 @@ builder.Services.AddHttpClient<ScryfallService>(c =>
     c.BaseAddress = new Uri("https://api.scryfall.com/");
     c.DefaultRequestHeaders.UserAgent.ParseAdd("Diviny/1.0");
     c.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+
+builder.Services.AddHttpClient<CollectionService>(c =>
+{
+    c.BaseAddress = new Uri("https://api.scryfall.com/");
+    c.DefaultRequestHeaders.UserAgent.ParseAdd("Diviny/1.0");
+    c.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+    c.Timeout = TimeSpan.FromSeconds(60);
 });
 
 builder.Services.AddHttpClient<CommanderSpellbookService>(c =>
@@ -65,8 +82,8 @@ builder.Services.AddScoped<CardClassifierService>();
 builder.Services.AddScoped<DeckAnalysisService>();
 builder.Services.AddScoped<ResultCacheService>();
 builder.Services.AddScoped<DeckBuilderService>();
-builder.Services.AddScoped<RulesChatService>();
 builder.Services.AddScoped<RulesService>();
+builder.Services.AddScoped<RulesChatService>();
 
 var app = builder.Build();
 

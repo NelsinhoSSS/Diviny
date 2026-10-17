@@ -16,12 +16,13 @@ namespace Diviny.Controllers
         private readonly ResultCacheService _cache;
         private readonly DeckBuilderService _construtor;
         private readonly RulesChatService _regrasChat;
+        private readonly CollectionService _colecoes;
 
         public HomeController(DeckService deckService, DeckStatsService statsService,
                               CommanderSpellbookService spellbook,
                               CardClassifierService classificador, DeckAnalysisService analise,
                               ResultCacheService cache, DeckBuilderService construtor,
-                              RulesChatService regrasChat)
+                              RulesChatService regrasChat, CollectionService colecoes)
         {
             _deckService = deckService;
             _statsService = statsService;
@@ -31,6 +32,7 @@ namespace Diviny.Controllers
             _cache = cache;
             _construtor = construtor;
             _regrasChat = regrasChat;
+            _colecoes = colecoes;
         }
 
         public IActionResult Index() => View();
@@ -195,9 +197,35 @@ namespace Diviny.Controllers
             return Json(new { resposta });
         }
 
+        // ===== Coleções =====
+
+        [HttpGet]
+        [EnableRateLimiting("colecoes")]
+        public async Task<IActionResult> Colecoes(string? q)
+        {
+            var consulta = (q ?? "").Trim();
+
+            if (consulta.Length == 0)
+                return View(new ResultadoColecao());
+
+            if (consulta.Length > 80)
+                return View(new ResultadoColecao { Consulta = consulta[..80], Erro = "Nome muito longo." });
+
+            return View(await _colecoes.BuscarAsync(consulta));
+        }
+
+        // Sugestões de nomes enquanto a pessoa digita
+        [HttpGet]
+        public async Task<IActionResult> SugerirColecoes(string? q)
+        {
+            var termo = (q ?? "").Trim();
+            if (termo.Length > 80) return Json(Array.Empty<string>());
+
+            return Json(await _colecoes.SugerirAsync(termo));
+        }
+
         // ===== Outras páginas =====
 
-        public IActionResult Colecoes() => View();
         public IActionResult Simulacao() => View();
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

@@ -1,9 +1,218 @@
-﻿@{
+﻿@model Diviny.Services.ResultadoColecao
+@{
     ViewData["Title"] = "Coleções";
+
+    var cores = new[]
+    {
+        (Chave: "W", Nome: "Branco",    Cor: "#f5f5f5"),
+        (Chave: "U", Nome: "Azul",      Cor: "#3b82f6"),
+        (Chave: "B", Nome: "Preto",     Cor: "#1a1a1a"),
+        (Chave: "R", Nome: "Vermelho",  Cor: "#ef4444"),
+        (Chave: "G", Nome: "Verde",     Cor: "#22c55e"),
+        (Chave: "C", Nome: "Incolor",    Cor: "#9ca3af"),
+        (Chave: "M", Nome: "Multicolor", Cor: "#eab308")
+    };
+
+    var nomesTipo = new Dictionary<string, string>
+    {
+        ["Creature"] = "Criatura",
+        ["Planeswalker"] = "Planeswalker",
+        ["Artifact"] = "Artefato",
+        ["Enchantment"] = "Encantamento",
+        ["Instant"] = "Instant",
+        ["Sorcery"] = "Sorcery",
+        ["Land"] = "Terreno",
+        ["Battle"] = "Batalha",
+        ["Outro"] = "Outros"
+    };
+
+    // Só os tipos que existem na coleção carregada
+    var tiposPresentes = nomesTipo.Keys.Where(t => Model.Cartas.Any(c => c.Categoria == t)).ToList();
 }
 
-<div class="container py-5">
-    <h1>Coleções</h1>
-    <p>Conteúdo da página Coleções.</p>
-    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Voltar ao menu</a>
-</div>
+<h1 class="titulo-menu">Coleções</h1>
+
+<form method="get" asp-action="Colecoes" class="busca-colecao">
+    <input type="text" id="busca" name="q" value="@Model.Consulta" class="campo" autocomplete="off"
+           list="sugestoes-colecoes" maxlength="80"
+           placeholder="Nome ou código da coleção, ex: Dominaria United ou mh3" />
+    <datalist id="sugestoes-colecoes"></datalist>
+    <button type="submit" class="botao">Buscar</button>
+</form>
+
+@if (Model.Erro != null)
+{
+    <div class="alerta alerta-erro colecao-bloco">@Model.Erro</div>
+}
+
+@if (Model.Sugestoes.Any())
+{
+    <div class="colecao-bloco">
+        <p>Encontrei várias coleções com esse nome. Escolha uma:</p>
+        <ul class="lista-colecoes">
+            @foreach (var s in Model.Sugestoes)
+            {
+                <li>
+                    <a asp-action="Colecoes" asp-route-q="@s.Codigo">@s.Nome</a>
+                    <span class="texto-suave">
+                        (@s.Codigo.ToUpper()@(s.Lancamento.Length >= 4 ? " · " + s.Lancamento[..4] : "") · @s.TotalCartas cartas)
+                    </span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@if (Model.Colecao != null && Model.Cartas.Any())
+{
+    <div class="colecao-bloco">
+        <div class="colecao-cabecalho">
+            @if (!string.IsNullOrEmpty(Model.Colecao.Icone))
+            {
+                <img src="@Model.Colecao.Icone" alt="" class="set-icone" />
+            }
+            <div>
+                <h2>@Model.Colecao.Nome</h2>
+                <span class="texto-suave">
+                    @Model.Colecao.Codigo.ToUpper()@(Model.Colecao.Lancamento.Length >= 4 ? " · " + Model.Colecao.Lancamento[..4] : "")
+                    · @Model.Cartas.Count cartas
+                </span>
+            </div>
+        </div>
+
+        @if (Model.Truncado)
+        {
+            <div class="alerta alerta-aviso">
+                Esta coleção é muito grande: mostrando só as primeiras @Model.Cartas.Count cartas.
+            </div>
+        }
+
+        <!-- Filtros -->
+        <div class="filtros">
+            <div class="filtro-grupo">
+                <span class="filtro-titulo">Cor</span>
+                @foreach (var c in cores)
+                {
+                    <label class="pill">
+                        <input type="checkbox" class="filtro" data-grupo="cor" value="@c.Chave" />
+                        <span class="pill-cor" style="--cor:@c.Cor">@c.Nome</span>
+                    </label>
+                }
+            </div>
+
+            <div class="filtro-grupo">
+                <span class="filtro-titulo">Tipo</span>
+                @foreach (var t in tiposPresentes)
+                {
+                    <label class="pill">
+                        <input type="checkbox" class="filtro" data-grupo="tipo" value="@t" />
+                        <span>@nomesTipo[t]</span>
+                    </label>
+                }
+            </div>
+
+            <div class="filtro-rodape">
+                <span id="contagem" class="texto-suave">Mostrando @Model.Cartas.Count de @Model.Cartas.Count cartas</span>
+                <button type="button" class="botao-link" id="limpar-filtros">Limpar filtros</button>
+            </div>
+        </div>
+
+        <div id="sem-resultado" class="placeholder-resultado escondido">Nenhuma carta com esses filtros.</div>
+
+        <!-- Cartas -->
+        <div class="grade-cartas">
+            @foreach (var c in Model.Cartas)
+            {
+                var tokens = c.Cores.Count == 0
+                    ? "C"
+                    : string.Join(" ", c.Cores) + (c.Cores.Count > 1 ? " M" : "");
+
+                <a class="carta-item" href="@c.Url" target="_blank" rel="noopener"
+                   data-cores="@tokens" data-tipo="@c.Categoria" title="@c.Nome">
+                    @if (!string.IsNullOrEmpty(c.Imagem))
+                    {
+                        <img src="@c.Imagem" alt="@c.Nome" loading="lazy" />
+                    }
+                    else
+                    {
+                        <span class="carta-sem-imagem">@c.Nome</span>
+                    }
+                </a>
+            }
+        </div>
+
+        <p class="texto-suave">Dados e imagens: Scryfall.</p>
+    </div>
+}
+
+<p><a asp-action="Index" class="link-voltar">← Voltar ao menu</a></p>
+
+@section Scripts {
+    <script>
+        // ===== Sugestões enquanto digita =====
+        const urlSugestoes = '@Url.Action("SugerirColecoes", "Home")';
+        const campoBusca = document.getElementById('busca');
+        const listaSugestoes = document.getElementById('sugestoes-colecoes');
+        let timer;
+
+        campoBusca.addEventListener('input', () => {
+            clearTimeout(timer);
+            const termo = campoBusca.value.trim();
+            if (termo.length < 2) return;
+
+            timer = setTimeout(async () => {
+                try {
+                    const r = await fetch(urlSugestoes + '?q=' + encodeURIComponent(termo));
+                    if (!r.ok) return;
+
+                    const nomes = await r.json();
+                    listaSugestoes.innerHTML = '';
+                    nomes.forEach(n => {
+                        const o = document.createElement('option');
+                        o.value = n;
+                        listaSugestoes.appendChild(o);
+                    });
+                } catch { /* sem sugestões, sem problema */ }
+            }, 250);
+        });
+
+        // ===== Filtros (rodam no navegador, sem nova busca) =====
+        const filtros = Array.from(document.querySelectorAll('.filtro'));
+        const cartas = Array.from(document.querySelectorAll('.carta-item'));
+
+        if (filtros.length > 0) {
+            const contagem = document.getElementById('contagem');
+            const semResultado = document.getElementById('sem-resultado');
+
+            function marcados(grupo) {
+                return filtros.filter(f => f.dataset.grupo === grupo && f.checked).map(f => f.value);
+            }
+
+            function aplicar() {
+                const cores = marcados('cor');
+                const tipos = marcados('tipo');
+                let visiveis = 0;
+
+                cartas.forEach(c => {
+                    const tokensCor = c.dataset.cores.split(' ');
+                    const okCor = cores.length === 0 || cores.some(x => tokensCor.includes(x));
+                    const okTipo = tipos.length === 0 || tipos.includes(c.dataset.tipo);
+                    const mostrar = okCor && okTipo;
+
+                    c.classList.toggle('escondido', !mostrar);
+                    if (mostrar) visiveis++;
+                });
+
+                contagem.textContent = 'Mostrando ' + visiveis + ' de ' + cartas.length + ' cartas';
+                semResultado.classList.toggle('escondido', visiveis > 0);
+            }
+
+            filtros.forEach(f => f.addEventListener('change', aplicar));
+
+            document.getElementById('limpar-filtros').addEventListener('click', () => {
+                filtros.forEach(f => f.checked = false);
+                aplicar();
+            });
+        }
+    </script>
+}
