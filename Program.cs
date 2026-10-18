@@ -10,11 +10,11 @@ builder.Services.AddControllersWithViews();
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    o.KnownIPNetworks.Clear();
+    o.KnownNetworks.Clear();
     o.KnownProxies.Clear();
 });
 
-// Limites por visitante (protegem a cota gratuita da IA e a do Scryfall)
+// Limites por visitante (protegem a cota gratuita da IA, a do Scryfall e o processador)
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -43,6 +43,15 @@ builder.Services.AddRateLimiter(o =>
         {
             PermitLimit = 20,
             Window = TimeSpan.FromMinutes(5),
+            QueueLimit = 0
+        }));
+
+    o.AddPolicy("simulacao", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "anonimo",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 6,
+            Window = TimeSpan.FromMinutes(10),
             QueueLimit = 0
         }));
 });
@@ -84,6 +93,7 @@ builder.Services.AddScoped<ResultCacheService>();
 builder.Services.AddScoped<DeckBuilderService>();
 builder.Services.AddScoped<RulesService>();
 builder.Services.AddScoped<RulesChatService>();
+builder.Services.AddScoped<SimulationService>();
 
 var app = builder.Build();
 

@@ -1,9 +1,245 @@
 ﻿@{
     ViewData["Title"] = "Simulação";
+
+    var slots = new[]
+    {
+        new { Cor = "verde",    Titulo = "Deck 1" },
+        new { Cor = "azul",     Titulo = "Deck 2" },
+        new { Cor = "vermelho", Titulo = "Deck 3" },
+        new { Cor = "amarelo",  Titulo = "Deck 4" }
+    };
 }
 
-<div class="container py-5">
-    <h1>Simulação</h1>
-    <p>Conteúdo da página Simulação.</p>
-    <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Voltar ao menu</a>
+<h1 class="titulo-menu">Simulação</h1>
+
+<p class="texto-suave texto-centro">
+    Informe o commander e a lista de 2 a 4 decks (uma carta por linha, ex: 1 Sol Ring) e compare as chances de vitória.
+</p>
+
+<div class="simulacao-grade">
+    @for (var i = 0; i < slots.Length; i++)
+    {
+        <div class="@("slot slot-" + slots[i].Cor)" data-slot="@i">
+            <div class="slot-titulo">@slots[i].Titulo</div>
+            <input type="text" class="campo slot-commander" maxlength="100" placeholder="Commander" />
+            <textarea class="campo slot-lista" rows="16" maxlength="12000"
+                      placeholder="1 Sol Ring&#10;1 Arcane Signet&#10;..."></textarea>
+        </div>
+    }
 </div>
+
+<div id="sim-erro" class="alerta alerta-erro escondido"></div>
+
+<button type="button" id="btn-simular" class="botao botao-largo">Mostrar porcentagem de vitória</button>
+
+<p><a asp-action="Index" class="link-voltar">← Voltar ao menu</a></p>
+
+<!-- Janela com o resultado -->
+<div id="modal-resultado" class="modal-fundo escondido" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <div class="modal-caixa">
+        <button type="button" class="modal-fechar" id="modal-fechar" aria-label="Fechar">&times;</button>
+
+        <h2 id="modal-titulo">Chance de vitória</h2>
+        <p id="sim-destaque" class="sim-destaque"></p>
+
+        <div class="modal-corpo">
+            <div id="sim-pizza"></div>
+            <ul id="sim-legenda" class="sim-legenda"></ul>
+        </div>
+
+        <div id="sim-detalhes" class="sim-detalhes"></div>
+
+        <details class="sim-como">
+            <summary>Como é calculado</summary>
+            <p>
+                Cada deck recebe uma <strong>força</strong> de 0 a 100, feita a partir das estatísticas da página Analisar:
+                35% ofensiva (finalização, velocidade e agressividade), 15% defesa, 20% consistência
+                (terrenos, rampa e compra de cartas) e 30% bracket.
+            </p>
+            <p>
+                As forças viram chances de vitória por uma fórmula exponencial: decks de força igual dividem as chances
+                igualmente, e cada 16 pontos de diferença multiplicam as chances por cerca de 2,7. A soma sempre dá 100%.
+            </p>
+        </details>
+
+        <p id="sim-rodape" class="texto-suave"></p>
+        <ul id="sim-avisos" class="sim-avisos"></ul>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const urlSimular = '@Url.Action("Simular", "Home")';
+        const corSlot = ['#22c55e', '#3b82f6', '#ef4444', '#eab308'];
+        const textoSlot = ['#0b0b10', '#ffffff', '#ffffff', '#0b0b10'];
+
+        const btn = document.getElementById('btn-simular');
+        const erroEl = document.getElementById('sim-erro');
+        const modal = document.getElementById('modal-resultado');
+        const textoBtn = btn.textContent;
+
+        const pct = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+        const num = v => v.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+
+        function el(tag, classe, texto) {
+            const e = document.createElement(tag);
+            if (classe) e.className = classe;
+            if (texto !== undefined) e.textContent = texto;
+            return e;
+        }
+
+        function mostrarErro(msg) {
+            erroEl.textContent = msg;
+            erroEl.classList.remove('escondido');
+        }
+
+        function desenharPizza(decks) {
+            const ns = 'http://www.w3.org/2000/svg';
+            const cx = 150, cy = 150, r = 140;
+
+            const svg = document.createElementNS(ns, 'svg');
+            svg.setAttribute('viewBox', '0 0 300 300');
+            svg.setAttribute('class', 'pizza-svg');
+
+            function rotulo(x, y, slot, valor) {
+                const t = document.createElementNS(ns, 'text');
+                t.setAttribute('x', x);
+                t.setAttribute('y', y);
+                t.setAttribute('text-anchor', 'middle');
+                t.setAttribute('dominant-baseline', 'central');
+                t.setAttribute('font-size', '16');
+                t.setAttribute('font-weight', '700');
+                t.setAttribute('fill', textoSlot[slot]);
+                t.textContent = pct(valor);
+                svg.appendChild(t);
+            }
+
+            let ang = -Math.PI / 2;
+
+            decks.forEach(d => {
+                const frac = d.vitoria / 100;
+                if (frac <= 0) return;
+
+                if (frac >= 0.9999) {
+                    const c = document.createElementNS(ns, 'circle');
+                    c.setAttribute('cx', cx);
+                    c.setAttribute('cy', cy);
+                    c.setAttribute('r', r);
+                    c.setAttribute('fill', corSlot[d.slot]);
+                    svg.appendChild(c);
+                    rotulo(cx, cy, d.slot, d.vitoria);
+                    return;
+                }
+
+                const fim = ang + frac * 2 * Math.PI;
+                const x1 = cx + r * Math.cos(ang), y1 = cy + r * Math.sin(ang);
+                const x2 = cx + r * Math.cos(fim), y2 = cy + r * Math.sin(fim);
+
+                const path = document.createElementNS(ns, 'path');
+                path.setAttribute('d', `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${frac > 0.5 ? 1 : 0} 1 ${x2} ${y2} Z`);
+                path.setAttribute('fill', corSlot[d.slot]);
+                path.setAttribute('stroke', '#1c1c26');
+                path.setAttribute('stroke-width', '2');
+                svg.appendChild(path);
+
+                if (frac >= 0.05) {
+                    const meio = ang + (frac * Math.PI);
+                    rotulo(cx + r * 0.62 * Math.cos(meio), cy + r * 0.62 * Math.sin(meio), d.slot, d.vitoria);
+                }
+
+                ang = fim;
+            });
+
+            return svg;
+        }
+
+        function abrirResultado(d) {
+            const melhor = d.decks.reduce((a, b) => b.vitoria > a.vitoria ? b : a);
+            document.getElementById('sim-destaque').textContent =
+                `Mais provável de vencer: Deck ${melhor.slot + 1} (${melhor.nome})`;
+
+            const pizza = document.getElementById('sim-pizza');
+            pizza.innerHTML = '';
+            pizza.appendChild(desenharPizza(d.decks));
+
+            const legenda = document.getElementById('sim-legenda');
+            legenda.innerHTML = '';
+            d.decks.forEach(x => {
+                const li = el('li', 'sim-item');
+                const bola = el('span', 'sim-bola');
+                bola.style.background = corSlot[x.slot];
+                li.append(bola, el('span', 'sim-nome', `Deck ${x.slot + 1} · ${x.nome}`), el('strong', 'sim-pct', pct(x.vitoria)));
+                legenda.appendChild(li);
+            });
+
+            const detalhes = document.getElementById('sim-detalhes');
+            detalhes.innerHTML = '';
+            d.decks.forEach(x => {
+                const caixa = el('div', 'sim-detalhe');
+                caixa.style.borderLeftColor = corSlot[x.slot];
+                caixa.appendChild(el('strong', null, `Deck ${x.slot + 1} · ${x.nome}`));
+                caixa.appendChild(el('div', 'texto-suave',
+                    `Força ${x.forca}/100 · Ofensiva ${x.ofensiva} · Defesa ${x.defesa} · Consistência ${x.consistencia} · Bracket ${x.bracket} (${x.bracketNome})`));
+                caixa.appendChild(el('div', 'texto-suave',
+                    `CMC médio ${num(x.cmcMedio)} · ${x.terrenos} terrenos · ${x.rampa} de rampa · ${x.compra} de compra · ${x.combosFinais} combos finais`));
+                detalhes.appendChild(caixa);
+            });
+
+            document.getElementById('sim-rodape').textContent =
+                'Estimativa feita a partir das estatísticas de cada deck, para comparar os decks entre si. Não é uma previsão exata de uma partida.';
+
+            const avisos = document.getElementById('sim-avisos');
+            avisos.innerHTML = '';
+            d.avisos.forEach(a => avisos.appendChild(el('li', null, a)));
+
+            modal.classList.remove('escondido');
+            document.body.classList.add('modal-aberto');
+            document.getElementById('modal-fechar').focus();
+        }
+
+        function fecharModal() {
+            modal.classList.add('escondido');
+            document.body.classList.remove('modal-aberto');
+        }
+
+        document.getElementById('modal-fechar').addEventListener('click', fecharModal);
+        modal.addEventListener('click', e => { if (e.target === modal) fecharModal(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
+
+        btn.addEventListener('click', async () => {
+            erroEl.classList.add('escondido');
+
+            const decks = Array.from(document.querySelectorAll('.slot')).map(s => ({
+                slot: parseInt(s.dataset.slot),
+                commander: s.querySelector('.slot-commander').value.trim(),
+                lista: s.querySelector('.slot-lista').value
+            }));
+
+            btn.disabled = true;
+            btn.textContent = 'Calculando... (pode levar alguns segundos)';
+
+            try {
+                const r = await fetch(urlSimular, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decks })
+                });
+
+                if (r.status === 429) {
+                    mostrarErro('Muitas simulações em pouco tempo. Aguarde alguns minutos e tente de novo.');
+                } else if (!r.ok) {
+                    mostrarErro('Algo deu errado. Tente novamente.');
+                } else {
+                    const d = await r.json();
+                    if (d.erro) mostrarErro(d.erro);
+                    else abrirResultado(d);
+                }
+            } catch {
+                mostrarErro('Não consegui conectar. Tente novamente.');
+            }
+
+            btn.disabled = false;
+            btn.textContent = textoBtn;
+        });
+    </script>
+}

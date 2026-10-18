@@ -17,12 +17,14 @@ namespace Diviny.Controllers
         private readonly DeckBuilderService _construtor;
         private readonly RulesChatService _regrasChat;
         private readonly CollectionService _colecoes;
+        private readonly SimulationService _simulacao;
 
         public HomeController(DeckService deckService, DeckStatsService statsService,
                               CommanderSpellbookService spellbook,
                               CardClassifierService classificador, DeckAnalysisService analise,
                               ResultCacheService cache, DeckBuilderService construtor,
-                              RulesChatService regrasChat, CollectionService colecoes)
+                              RulesChatService regrasChat, CollectionService colecoes,
+                              SimulationService simulacao)
         {
             _deckService = deckService;
             _statsService = statsService;
@@ -33,6 +35,7 @@ namespace Diviny.Controllers
             _construtor = construtor;
             _regrasChat = regrasChat;
             _colecoes = colecoes;
+            _simulacao = simulacao;
         }
 
         public IActionResult Index() => View();
@@ -224,9 +227,17 @@ namespace Diviny.Controllers
             return Json(await _colecoes.SugerirAsync(termo));
         }
 
-        // ===== Outras páginas =====
+        // ===== Simulação =====
 
         public IActionResult Simulacao() => View();
+
+        [HttpPost]
+        [EnableRateLimiting("simulacao")]
+        public async Task<IActionResult> Simular([FromBody] PedidoSimulacao pedido)
+        {
+            var resultado = await _simulacao.SimularAsync(pedido?.Decks ?? new());
+            return Json(resultado);
+        }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
