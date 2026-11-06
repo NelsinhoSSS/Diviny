@@ -85,7 +85,7 @@ namespace Diviny.Services
                     if (nf.TryGetProperty("name", out var n))
                         pendentes.Add(n.GetString() ?? "");
 
-                await Task.Delay(100); // respeita o limite do Scryfall
+                await Task.Delay(100); 
             }
 
             if (!aproximar)

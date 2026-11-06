@@ -16,8 +16,6 @@
         public int Poder { get; set; }
         public bool EhTerreno => TypeLine.Split(" // ")[0].Contains("Land");
         public bool EhTerrenoBasico => TypeLine.Contains("Basic") && TypeLine.Contains("Land");
-
-        // Tipo principal da carta (cada carta conta uma vez só)
         public string Categoria
         {
             get

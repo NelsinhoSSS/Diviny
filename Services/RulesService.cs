@@ -5,7 +5,7 @@ namespace Diviny.Services
 {
     public class RegraEntrada
     {
-        public string Numero { get; set; } = "";      // "702.2a" ou, no glossário, o termo
+        public string Numero { get; set; } = "";     
         public string Texto { get; set; } = "";
         public string TextoLower { get; set; } = "";
         public bool Glossario { get; set; }
@@ -17,7 +17,8 @@ namespace Diviny.Services
         private static List<RegraEntrada>? _regras;
         private static readonly SemaphoreSlim Trava = new(1, 1);
 
-        private static readonly Regex LinhaRegra = new(@"^(\d{3}\.\d+[a-z]?)\.?\s+(.+)$", RegexOptions.Compiled);
+        private static readonly Regex LinhaRegra = new
+            (@"^(\d{3}\.\d+[a-z]?)\.?\s+(.+)$", RegexOptions.Compiled);
         private static readonly Regex Cabecalho = new(@"^\d{1,3}\.\s", RegexOptions.Compiled);
         private static readonly Regex Titulo = new(@"^\d{3}\.\d+$", RegexOptions.Compiled);
         private static readonly Regex TituloGlossario = new(@"^Glossary\s*$", RegexOptions.Multiline | RegexOptions.Compiled);
@@ -177,7 +178,7 @@ namespace Diviny.Services
 
                     p += Math.Min(Contar(r.TextoLower, t), 3);
 
-                    // Reforço para a seção central do assunto (ex.: "stack" -> regras 405.x)
+                    // Reforço das regras (ex.: "stack" -> regras 405.x)
                     if (!r.Glossario && SecoesPorTermo.TryGetValue(t, out var prefixos) &&
                         prefixos.Any(pref => r.Numero.StartsWith(pref, StringComparison.Ordinal)))
                         p += 8;
