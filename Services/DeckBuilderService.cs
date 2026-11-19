@@ -9,7 +9,6 @@ namespace Diviny.Services
     {
         public string CommanderNome { get; set; } = "";
         public int? Bracket { get; set; }
-        // Chaves: Creature, Artifact, Enchantment, Instant, Sorcery, Planeswalker, Land
         public Dictionary<string, int> Quantidades { get; set; } = new();
         public int? Basicos { get; set; }
     }

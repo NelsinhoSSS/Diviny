@@ -13,7 +13,7 @@
 <h1 class="titulo-menu">Simulação</h1>
 
 <p class="texto-suave texto-centro">
-    Informe o commander e a lista de 2 a 4 decks (uma carta por linha, ex: 1 Sol Ring) e compare as chances de vitória.
+    Informe o commander e a lista de 2 a 4 decks (uma carta por linha, ex: 1 Sol Ring) e compare o desempenho em uma partida.
 </p>
 
 <div class="simulacao-grade">
@@ -30,7 +30,7 @@
 
 <div id="sim-erro" class="alerta alerta-erro escondido"></div>
 
-<button type="button" id="btn-simular" class="botao botao-largo">Mostrar porcentagem de vitória</button>
+<button type="button" id="btn-simular" class="botao botao-largo">Comparar desempenho dos decks</button>
 
 <p><a asp-action="Index" class="link-voltar">← Voltar ao menu</a></p>
 
@@ -39,7 +39,7 @@
     <div class="modal-caixa">
         <button type="button" class="modal-fechar" id="modal-fechar" aria-label="Fechar">&times;</button>
 
-        <h2 id="modal-titulo">Chance de vitória</h2>
+        <h2 id="modal-titulo">Estatística de desempenho</h2>
         <p id="sim-destaque" class="sim-destaque"></p>
 
         <div class="modal-corpo">

@@ -209,7 +209,8 @@ namespace Diviny.Services
             return s;
         }
 
-        // Mistura: 60% cálculo, 40% análise do deck
+        // junção das funçoes e d analise da ia, muda os valore em baixo (0,6 e 0,4 ) para alterar o peso da IA na nota final do deck.
+        // (0,6 = 60% do peso da nota final das funçoes , 0,4 = 40% do peso da nota final da IA) 
         public void AplicarIA(DeckStats s, AnaliseIA ia)
         {
             var notas = new Dictionary<string, int>
