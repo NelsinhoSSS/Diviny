@@ -21,7 +21,7 @@ namespace Diviny.Services
             "Eu só respondo perguntas sobre Magic: The Gathering (regras, cartas e interações). Pode perguntar algo sobre o jogo?";
 
         private const string AvisoSemRegras =
-            "Aviso: não consegui carregar o livro oficial de regras agora, então esta resposta pode estar menos precisa.\n\n";
+            "";
 
         // Palavras em português que apontam direto para termos das regras (não depende da triagem)
         private static readonly (string[] Gatilhos, string[] Termos)[] Atalhos =

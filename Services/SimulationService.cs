@@ -51,6 +51,7 @@ namespace Diviny.Services
         private const double PesoBracket = 0.30;
 
         // Quanto menor, mais a diferença de força pesa no resultado
+        // A temperatura mexe diretamente na função softmax, que transforma a força em chance de vitória
         private const double Temperatura = 16;
 
         private readonly DeckService _decks;
