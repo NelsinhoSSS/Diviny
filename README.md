@@ -1,7 +1,7 @@
 Link para o site: https://divinysss.onrender.com
 
 Listas dos Decks utilizados em testes:
-Para pegar a lista dos deck olhe no topo esquerdo da pagina clique em "more" depois em "export" deck" e clique em "Copy".
+Para pegar a lista dos deck olhe na região no topo esquerdo da pagina clique em "more" depois em "export" deck" e clique em "Copy".
 
 Deck 1:
 Commander -> The Ur-Dragon
